@@ -30,6 +30,12 @@ function gate(text: string): void {
   if (/[\r\n]/.test(text)) {
     throw new Error("entry must be a single line");
   }
+  // Judge-brief banned clichés (slow flight, invisible-while-nobody-watches):
+  // the entry must not reuse them.
+  const lower = text.toLowerCase();
+  if (lower.includes("slow flight") || lower.includes("invisible")) {
+    throw new Error("entry reuses a banned cliché from the judge brief");
+  }
 }
 
 function main(): void {
