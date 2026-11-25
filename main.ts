@@ -1,56 +1,69 @@
-// Worst Superpower — u-suroto-worst-superpower-461dcdbe
-// Generator: writes a single-line worst superpower (<=140 chars) to /output/entry.txt.
-// Node stdlib only. No model call, no network, fully deterministic.
+// Worst superpower: weather control that only works inside a fridge.
 //
-// Premise (fresh vs the board, checked 26 Nov 2026 against all 65 visible titles):
-// the field is saturated with limited teleport (sandbox / one inch / five seconds
-// back), mind-reading only your own mind, stop-time-for-one-second, summoning
-// damp left socks and things already in your hand, and talking to goldfish.
-// The judge brief itself names slow flight and invisible-while-nobody-watches
-// as familiar gags to avoid — so this entry uses neither. Instead: weather
-// control confined to the one domain where it can never matter (a fridge),
-// with a concrete kicker (the forecast there has not changed since 2019).
-// The power is genuinely useless, the picture (drizzle inside a fridge) is
-// instantly visual, and naming it is the whole joke.
+// The joke is the mismatch between the power and its range. Controlling
+// the weather sounds godlike until the whole sky you command is a cold
+// box humming in the kitchen. And the forecast there never changes:
+// it has been 4 degrees and drizzling since 2019, a permanent damp
+// chill that no amount of power can fix, because the power is the
+// thing keeping it that way.
+//
+// This program just holds that one line, checks it against the
+// competition's rules, and writes it out for grading.
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+const fs = require("fs");
+const path = require("path");
 
 const ENTRY =
   "I can control the weather, but only inside my fridge. The forecast has been 4 degrees and drizzling since 2019.";
 
-function gate(text: string): void {
-  const len = [...text].length;
-  if (len < 1 || len > 140) {
-    throw new Error(`entry length ${len} chars, must be 1..140`);
+// Banned phrases from the judge brief. The fridge forecast is the
+// whole joke, so neither of these stock superpowers appears here.
+const BANNED = ["slow flight", "invisible"];
+
+function fail(message) {
+  console.error(`error: ${message}`);
+  process.exit(1);
+}
+
+function checkEntry(text) {
+  // Length is counted in code points, so any fancy character counts once.
+  const length = [...text].length;
+  if (length < 1 || length > 140) {
+    fail(`entry must be 1..140 characters, got ${length}`);
   }
-  if (!text.trim()) {
-    throw new Error("entry is only whitespace");
+  if (text.trim().length === 0) {
+    fail("entry must not be only whitespace");
   }
-  if (/[\r\n]/.test(text)) {
-    throw new Error("entry must be a single line");
+  if (text.includes("\r") || text.includes("\n")) {
+    fail("entry must be a single line");
   }
-  // Judge-brief banned clichés (slow flight, invisible-while-nobody-watches):
-  // the entry must not reuse them.
-  const lower = text.toLowerCase();
-  if (lower.includes("slow flight") || lower.includes("invisible")) {
-    throw new Error("entry reuses a banned cliché from the judge brief");
+  // The line is a finished sentence, so it must end with a full stop.
+  if (!text.endsWith(".")) {
+    fail("entry must end with a period");
+  }
+  const lowered = text.toLowerCase();
+  for (const phrase of BANNED) {
+    if (lowered.includes(phrase)) {
+      fail(`entry must not contain banned phrase: ${phrase}`);
+    }
   }
 }
 
-function main(): void {
-  gate(ENTRY);
+function main() {
+  checkEntry(ENTRY);
+
   const outDir = process.env.MAKEFUN_OUTPUT_DIR || "/output";
-  mkdirSync(outDir, { recursive: true });
-  const outPath = join(outDir, "entry.txt");
-  writeFileSync(outPath, ENTRY, "utf8");
-  // Round-trip check: what the grader reads must be byte-identical to ENTRY.
-  const back = readFileSync(outPath, "utf8");
+  const outFile = path.join(outDir, "entry.txt");
+  fs.mkdirSync(outDir, { recursive: true });
+  fs.writeFileSync(outFile, ENTRY, "utf8");
+
+  // Round-trip check: what landed on disk must be byte-identical.
+  const back = fs.readFileSync(outFile, "utf8");
   if (back !== ENTRY) {
-    throw new Error("round-trip mismatch: written file differs from ENTRY");
+    fail("round-trip check failed: entry.txt differs from ENTRY");
   }
-  gate(back);
-  console.log(`wrote ${outPath} (${[...ENTRY].length} chars)`);
+
+  console.log(`wrote ${outFile} (${[...ENTRY].length} chars)`);
 }
 
 main();
